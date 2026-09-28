@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: roteamento-api
+  namespace: logistica
+  labels:
+    app: roteamento-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: roteamento-api
+  template:
+    metadata:
+      labels:
+        app: roteamento-api
+    spec:
+      containers:
+        - name: roteamento-api
+          image: logistica/roteamento-api:1.0
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          env:
+            - name: Roteamento__Rastreamento__BaseUrl
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: rastreamento-baseurl }
+            - name: Roteamento__Entrega__BaseUrl
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: entrega-baseurl }
+            - name: Roteamento__RabbitMq__Host
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: rabbitmq-host }
+            - name: Roteamento__RabbitMq__Port
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: rabbitmq-port }
+            - name: Roteamento__RabbitMq__User
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: rabbitmq-user }
+            - name: Roteamento__RabbitMq__Pass
+              valueFrom:
+                secretKeyRef: { name: logistica-secret, key: rabbitmq-pass }
+            - name: Roteamento__RabbitMq__Exchange
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: rabbitmq-exchange }
+            - name: Roteamento__Redis__ConnectionString
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: redis-connection }
+            - name: Roteamento__Circuito__FalhasParaAbrir
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: circuito-falhas }
+            - name: Roteamento__Circuito__SegundosAberto
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: circuito-segundos }
+            - name: Observabilidade__Seq__Url
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: seq-url }
+          # Probes no /health REAL: inclui a dependência
+          # Rastreamento.Api — readiness falha de verdade se ela cair.
+          livenessProbe:
+            httpGet: { path: /health/live, port: 8080 }
+            initialDelaySeconds: 25
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 12
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+          resources:
+            requests: { cpu: 250m, memory: 256Mi }
+            limits: { cpu: "1", memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: roteamento-api
+  namespace: logistica
+spec:
+  type: NodePort
+  selector:
+    app: roteamento-api
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30503

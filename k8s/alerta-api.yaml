@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alerta-api
+  namespace: logistica
+  labels:
+    app: alerta-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alerta-api
+  template:
+    metadata:
+      labels:
+        app: alerta-api
+    spec:
+      containers:
+        - name: alerta-api
+          image: logistica/alerta-api:1.0
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          env:
+            - name: Alerta__Entrega__BaseUrl
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: entrega-baseurl }
+            - name: Alerta__RabbitMq__Host
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: rabbitmq-host }
+            - name: Alerta__RabbitMq__Port
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: rabbitmq-port }
+            - name: Alerta__RabbitMq__User
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: rabbitmq-user }
+            - name: Alerta__RabbitMq__Pass
+              valueFrom:
+                secretKeyRef: { name: logistica-secret, key: rabbitmq-pass }
+            - name: Alerta__RabbitMq__Exchange
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: rabbitmq-exchange }
+            - name: Alerta__Management__BaseUrl
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: management-baseurl }
+            - name: Alerta__Management__User
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: management-user }
+            - name: Alerta__Management__Pass
+              valueFrom:
+                secretKeyRef: { name: logistica-secret, key: management-pass }
+            - name: Observabilidade__Seq__Url
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: seq-url }
+          livenessProbe:
+            httpGet: { path: /health/live, port: 8080 }
+            initialDelaySeconds: 25
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 12
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+          resources:
+            requests: { cpu: 250m, memory: 256Mi }
+            limits: { cpu: "1", memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alerta-api
+  namespace: logistica
+spec:
+  type: NodePort
+  selector:
+    app: alerta-api
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30504

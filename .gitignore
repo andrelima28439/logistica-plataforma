@@ -1,0 +1,19 @@
+# Dependências locais / segredos de dev
+.env
+
+# .NET
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+coverage/
+
+# Angular
+node_modules/
+dist/
+.angular/
+
+# SO / editores
+.DS_Store
+Thumbs.db

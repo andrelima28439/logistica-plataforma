@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # APIs .NET (observabilidade). O Prometheus roda em container;
+  # host.docker.internal aponta para as APIs rodando na máquina host.
+  - job_name: "entrega-api"
+    static_configs:
+      - targets: ["host.docker.internal:5001"]
+  - job_name: "rastreamento-api"
+    static_configs:
+      - targets: ["host.docker.internal:5002"]
+  - job_name: "roteamento-api"
+    static_configs:
+      - targets: ["host.docker.internal:5003"]
+  - job_name: "alerta-api"
+    static_configs:
+      - targets: ["host.docker.internal:5004"]

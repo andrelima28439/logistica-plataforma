@@ -1,0 +1,146 @@
+{
+  "uid": "logistica-operacional",
+  "title": "Logística — Painel Operacional",
+  "tags": ["logistica"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-15m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Posições/min (Rastreamento)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus-local" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(rastreamento_posicoes_total[1m]))",
+          "legendFormat": "posições/min"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Análises por resultado (Roteamento)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus-local" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (resultado) (rate(roteamento_analises_total[1m]))",
+          "legendFormat": "{{resultado}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Alertas por tipo",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus-local" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (tipo) (rate(alerta_processados_total[1m]))",
+          "legendFormat": "{{tipo}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Circuit breaker (0=fechado, 1=aberto, 2=meio-aberto)",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus-local" },
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "roteamento_circuito_estado",
+          "legendFormat": "estado"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 1, "color": "red" },
+              { "value": 2, "color": "yellow" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Latência p95 da análise (s)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus-local" },
+      "gridPos": { "h": 8, "w": 9, "x": 6, "y": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(roteamento_analise_duracao_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "DLQ — profundidade (alertas)",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus-local" },
+      "gridPos": { "h": 8, "w": 9, "x": 15, "y": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "alerta_dlq_mensagens",
+          "legendFormat": "mensagens"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 1, "color": "red" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Entregas criadas (total)",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus-local" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "entregas_criadas_total",
+          "legendFormat": "entregas"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Canais acionados (total por canal)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus-local" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (canal) (alerta_canais_total)",
+          "legendFormat": "{{canal}}"
+        }
+      ]
+    }
+  ]
+}

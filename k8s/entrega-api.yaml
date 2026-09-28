@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: entrega-api
+  namespace: logistica
+  labels:
+    app: entrega-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: entrega-api
+  template:
+    metadata:
+      labels:
+        app: entrega-api
+    spec:
+      containers:
+        - name: entrega-api
+          image: logistica/entrega-api:1.0
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MSSQL_SERVER
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: mssql-server }
+            - name: MSSQL_SA_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: logistica-secret, key: mssql-sa-password }
+            - name: Entrega__Sql__ConnectionString
+              value: "Server=$(MSSQL_SERVER);Database=master;User Id=sa;Password=$(MSSQL_SA_PASSWORD);TrustServerCertificate=True;Connect Timeout=3"
+            - name: Observabilidade__Seq__Url
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: seq-url }
+          livenessProbe:
+            httpGet: { path: /health/live, port: 8080 }
+            initialDelaySeconds: 25
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 12
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+          resources:
+            requests: { cpu: 250m, memory: 256Mi }
+            limits: { cpu: "1", memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: entrega-api
+  namespace: logistica
+spec:
+  type: NodePort
+  selector:
+    app: entrega-api
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30501

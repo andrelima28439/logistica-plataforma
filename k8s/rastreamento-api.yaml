@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rastreamento-api
+  namespace: logistica
+  labels:
+    app: rastreamento-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rastreamento-api
+  template:
+    metadata:
+      labels:
+        app: rastreamento-api
+    spec:
+      containers:
+        - name: rastreamento-api
+          image: logistica/rastreamento-api:1.0
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          env:
+            - name: Rastreamento__RabbitMq__Host
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: rabbitmq-host }
+            - name: Rastreamento__RabbitMq__Port
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: rabbitmq-port }
+            - name: Rastreamento__RabbitMq__User
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: rabbitmq-user }
+            - name: Rastreamento__RabbitMq__Pass
+              valueFrom:
+                secretKeyRef: { name: logistica-secret, key: rabbitmq-pass }
+            - name: Rastreamento__RabbitMq__Exchange
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: rabbitmq-exchange }
+            - name: Rastreamento__Redis__ConnectionString
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: redis-connection }
+            - name: Observabilidade__Seq__Url
+              valueFrom:
+                configMapKeyRef: { name: logistica-config, key: seq-url }
+          livenessProbe:
+            httpGet: { path: /health/live, port: 8080 }
+            initialDelaySeconds: 25
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 12
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+          resources:
+            requests: { cpu: 250m, memory: 256Mi }
+            limits: { cpu: "1", memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rastreamento-api
+  namespace: logistica
+spec:
+  type: NodePort
+  selector:
+    app: rastreamento-api
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30502

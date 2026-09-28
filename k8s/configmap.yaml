@@ -1,0 +1,24 @@
+# ConfigMap — NADA secreto aqui (hosts, portas, URLs, tuning).
+# A infra pesada (SQL Server, RabbitMQ, Redis, Seq) roda no Docker Compose
+# do host; os pods alcançam via host.minikube.internal. Serviço→serviço
+# usa DNS do cluster (ex.: http://rastreamento-api:8080).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logistica-config
+  namespace: logistica
+data:
+  infra-host: "host.minikube.internal"
+  rabbitmq-host: "host.minikube.internal"
+  rabbitmq-port: "5672"
+  rabbitmq-user: "logistica"
+  rabbitmq-exchange: "logistica.eventos"
+  redis-connection: "host.minikube.internal:6379,abortConnect=false,connectTimeout=2000"
+  seq-url: "http://host.minikube.internal:5341"
+  management-baseurl: "http://host.minikube.internal:15672"
+  management-user: "logistica"
+  mssql-server: "host.minikube.internal,1433"
+  rastreamento-baseurl: "http://rastreamento-api:8080"
+  entrega-baseurl: "http://entrega-api:8080"
+  circuito-falhas: "3"
+  circuito-segundos: "15"

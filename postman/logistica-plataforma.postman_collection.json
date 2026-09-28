@@ -1,0 +1,91 @@
+{
+  "info": {
+    "name": "logistica-plataforma",
+    "description": "Fluxo de aceite ponta a ponta. Execute na ordem. Pré-requisitos: docker compose up -d + 4 APIs (:5001-:5004).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "entrega", "value": "http://localhost:5001" },
+    { "key": "rastreamento", "value": "http://localhost:5002" },
+    { "key": "roteamento", "value": "http://localhost:5003" },
+    { "key": "alerta", "value": "http://localhost:5004" },
+    { "key": "entregaId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Criar entrega",
+      "request": {
+        "method": "POST",
+        "url": "{{entrega}}/entregas",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origem\": \"São Paulo/SP\",\n  \"destino\": \"Santos/SP\",\n  \"transportadorId\": \"transp-demo\",\n  \"tipoCarga\": \"REFRIGERADA\",\n  \"prazoEstimado\": \"2026-09-28T12:00:00-03:00\"\n}"
+        }
+      }
+    },
+    {
+      "name": "2. Simular posições normais (GPS manual)",
+      "request": {
+        "method": "POST",
+        "url": "{{rastreamento}}/rastreamento/{{entregaId}}/posicao",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"latitude\": -23.55,\n  \"longitude\": -46.63\n}"
+        }
+      }
+    },
+    {
+      "name": "2b. Ligar GPS mockado (alternativa ao manual)",
+      "request": {
+        "method": "POST",
+        "url": "{{rastreamento}}/rastreamento/{{entregaId}}/simulacao/iniciar",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{ \"intervaloSegundos\": 2 }" }
+      }
+    },
+    {
+      "name": "3. Simular desvio de rota (contexto com rota no RJ)",
+      "request": {
+        "method": "POST",
+        "url": "{{roteamento}}/roteamento/entregas",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"entregaId\": \"{{entregaId}}\",\n  \"tipoCarga\": \"REFRIGERADA\",\n  \"rotaEsperada\": [{ \"latitude\": -22.9068, \"longitude\": -43.1729 }]\n}"
+        }
+      }
+    },
+    {
+      "name": "4. Carga refrigerada com atraso (gap de sinal 20s)",
+      "request": {
+        "method": "POST",
+        "url": "{{rastreamento}}/rastreamento/{{entregaId}}/simulacao/gap",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{ \"duracaoSegundos\": 20 }" }
+      }
+    },
+    {
+      "name": "5. Consultar alertas gerados",
+      "request": { "method": "GET", "url": "{{alerta}}/alertas?tipo=DESVIO" }
+    },
+    {
+      "name": "5b. Detalhe da entrega (posições + eventos)",
+      "request": { "method": "GET", "url": "{{entrega}}/entregas/{{entregaId}}" }
+    },
+    {
+      "name": "6. Observar circuit breaker (após derrubar a Rastreamento.Api)",
+      "request": {
+        "method": "POST",
+        "url": "{{roteamento}}/roteamento/entregas/{{entregaId}}/analisar",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" }
+      }
+    },
+    {
+      "name": "6b. Estado do circuit breaker",
+      "request": { "method": "GET", "url": "{{roteamento}}/roteamento/circuit-breaker" }
+    }
+  ]
+}
